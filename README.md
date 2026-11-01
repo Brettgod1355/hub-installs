@@ -3,8 +3,16 @@
 A daily record of how many RuneLite players have each Plugin Hub plugin installed,
 an hourly one for the last two days, and a page that charts it.
 
-The page: https://2hbuilds.github.io/hub-installs/ (once GitHub Pages is switched on
+The page: https://brettgod1355.github.io/hub-installs/ (once GitHub Pages is switched on
 for this repository, serving from the root of `main`).
+
+## Credit
+
+Built by [2hBuilds](https://github.com/2hBuilds) in
+[2hBuilds/hub-installs](https://github.com/2hBuilds/hub-installs), who kindly said I was
+welcome to make my own. This copy keeps his commit history and code; the changes are only
+the plugins it charts (`plugins.txt`), the owner it watches (`owners.txt`) and the data,
+which starts from his daily snapshots of the whole Hub (`data/all/`).
 
 The chart and each card's "Change, 1 / 7 / 30 days" rows are the daily recording described
 below, so they run up to the last daily reading (03:15 UTC); hovering a row says which. The

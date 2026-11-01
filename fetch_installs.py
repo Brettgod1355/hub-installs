@@ -16,7 +16,7 @@ import urllib.request
 
 BOOTSTRAP_URL = "https://static.runelite.net/bootstrap.json"
 PLUGINHUB_URL = "https://api.runelite.net/runelite-{version}/pluginhub"
-USER_AGENT = "hub-installs (github.com/2hBuilds)"
+USER_AGENT = "hub-installs (github.com/Brettgod1355)"
 ROOT = os.path.dirname(os.path.abspath(__file__))
 HOURLY_HEADER = ["time", "plugin", "installs"]
 # two days of hourly rows: the page needs the one nearest to 24 hours back, and a few late
