@@ -1,0 +1,27 @@
+{
+ "checkedAt": "2026-11-01T11:50:46Z",
+ "version": "1.13.4",
+ "versionSince": "2026-11-01T11:50:46Z",
+ "plugins": [
+  {
+   "slug": "cargo-hold-alert",
+   "name": "AFK Shipwrecks",
+   "author": "Brettgod1355",
+   "version": "2.4",
+   "status": "ok",
+   "reason": null,
+   "since": "2026-11-01T11:50:46Z",
+   "warning": null
+  },
+  {
+   "slug": "sidebar-favorites",
+   "name": "Sidebar Favorites",
+   "author": "Brettgod1355",
+   "version": "1.0.5",
+   "status": "ok",
+   "reason": null,
+   "since": "2026-11-01T11:50:46Z",
+   "warning": null
+  }
+ ]
+}
