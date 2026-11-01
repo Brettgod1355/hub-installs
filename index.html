@@ -47,6 +47,17 @@
 	}
 	.ranges button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
 	.chart { position: relative; height: 320px; }
+	.strip { margin-top: 6px; border-top: 1px solid var(--line); padding-top: 6px; }
+	.lane { position: relative; height: 22px; }
+	.lane + .lane { margin-top: 2px; }
+	.chip {
+		position: absolute; top: 0; height: 20px; padding: 0 7px;
+		font: 700 11px Lato, sans-serif; line-height: 18px; white-space: nowrap;
+		color: var(--c); background: #1f1f1f; border: 1px solid var(--c); border-radius: 10px;
+		cursor: default;
+	}
+	.chip:hover, .chip:focus-visible { background: var(--c); color: #171717; outline: none; }
+	.chip i { position: absolute; top: -7px; width: 1px; height: 6px; background: var(--c); }
 	.plugins .card { margin-bottom: 0; }
 	.plugins { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
 	.plugins h2 { display: flex; align-items: center; gap: 8px; overflow-wrap: anywhere; }
@@ -88,6 +99,7 @@
 			<button type="button" data-days="0">all</button>
 		</div>
 		<div class="chart"><canvas id="chart" aria-label="Installs per day for each tracked plugin"></canvas></div>
+		<div class="strip" id="strip" hidden></div>
 	</section>
 
 	<section class="plugins" id="plugins"></section>
@@ -291,38 +303,77 @@ const nameOf = slug => hubNames[slug] || slug.split("-").map(w => w.charAt(0).to
 
 let releases = [];       // from data/releases.csv; without it the chart has no release markers
 
-// A dashed line in the plugin's colour on each day a version of it reached the Hub, with the version
-// on top. Versions on the same day stack; one too close to the last label on its row keeps its line
-// only, and the tooltip still names it.
+// The releases sit in a strip under the chart, one lane per plugin, as chips in the plugin's colour
+// lined up with their day on the x axis; the chart itself stays clean. Pointing at a chip (or
+// focusing it) draws one dashed line through the chart on that day. A chip that would overlap the
+// one before it in its lane drops to the lane's second line.
+let hoveredRelease = null;
 const releaseMarkers = {
 	id: "releaseMarkers",
-	afterDatasetsDraw(c, args, opts) {
+	afterDatasetsDraw(c) {
+		const m = hoveredRelease;
+		if (!m) return;
 		const { ctx, chartArea: area, scales: { x } } = c;
-		const lastLabelAt = [];
+		const px = x.getPixelForValue(m.index);
 		ctx.save();
-		ctx.font = "11px Lato, sans-serif";
-		ctx.textAlign = "center";
-		ctx.textBaseline = "top";
-		for (const m of opts.markers) {
-			const px = x.getPixelForValue(m.index);
-			ctx.strokeStyle = m.colour;
-			ctx.globalAlpha = 0.55;
-			ctx.setLineDash([3, 3]);
-			ctx.lineWidth = 1;
-			ctx.beginPath();
-			ctx.moveTo(px, area.top);
-			ctx.lineTo(px, area.bottom);
-			ctx.stroke();
-			ctx.globalAlpha = 1;
-			if (m.row >= opts.rows || !(px - (lastLabelAt[m.row] ?? -Infinity) >= 30)) continue;
-			lastLabelAt[m.row] = px;
-			ctx.fillStyle = m.colour;
-			const textX = Math.min(Math.max(px, area.left + 12), area.right - 12);
-			ctx.fillText(m.version, textX, area.top - 4 - (opts.rows - m.row) * 13);
-		}
+		ctx.strokeStyle = m.colour;
+		ctx.setLineDash([4, 3]);
+		ctx.lineWidth = 1.5;
+		ctx.beginPath();
+		ctx.moveTo(px, area.top);
+		ctx.lineTo(px, area.bottom);
+		ctx.stroke();
 		ctx.restore();
+	},
+	afterRender(c) {
+		const { chartArea: area, scales: { x } } = c;
+		const strip = document.getElementById("strip");
+		for (const lane of strip.querySelectorAll(".lane")) {
+			let end = [-Infinity, -Infinity];
+			for (const chip of lane.querySelectorAll(".chip")) {
+				const px = x.getPixelForValue(+chip.dataset.index);
+				const w = chip.offsetWidth;
+				const left = Math.min(Math.max(px - w / 2, area.left), area.right - w);
+				const line = left >= end[0] + 4 ? 0 : left >= end[1] + 4 ? 1 : 0;
+				end[line] = left + w;
+				chip.style.left = left + "px";
+				chip.style.top = line * 22 + "px";
+				chip.querySelector("i").style.left = (px - left) + "px";
+			}
+			lane.style.height = (end[1] === -Infinity ? 22 : 44) + "px";
+		}
 	}
 };
+
+function renderStrip(markers, slugs) {
+	const strip = document.getElementById("strip");
+	strip.replaceChildren();
+	strip.hidden = !markers.length;
+	for (const slug of slugs) {
+		const mine = markers.filter(m => m.slug === slug);
+		if (!mine.length) continue;
+		const lane = element("div", "lane");
+		lane.setAttribute("aria-label", `${nameOf(slug)} releases`);
+		for (const m of mine) {
+			const chip = element("button", "chip");
+			chip.type = "button";
+			chip.dataset.index = m.index;
+			chip.style.setProperty("--c", m.colour);
+			chip.title = `${nameOf(slug)} ${m.version} - released ${m.date}`;
+			chip.append(element("i"), document.createTextNode(m.version));
+			const show = on => {
+				hoveredRelease = on ? m : null;
+				chart.draw();
+			};
+			chip.addEventListener("mouseenter", () => show(true));
+			chip.addEventListener("mouseleave", () => show(false));
+			chip.addEventListener("focus", () => show(true));
+			chip.addEventListener("blur", () => show(false));
+			lane.append(chip);
+		}
+		strip.append(lane);
+	}
+}
 
 function renderChart(series, slugs, firstDate, lastDate, days) {
 	const start = days ? Math.max(toTime(firstDate), toTime(lastDate) - (days - 1) * DAY) : toTime(firstDate);
@@ -330,14 +381,14 @@ function renderChart(series, slugs, firstDate, lastDate, days) {
 	for (let t = start; t <= toTime(lastDate); t += DAY) labels.push(toDate(t));
 	const dense = labels.length <= 60;
 	const shown = releases.filter(r => slugs.includes(r.slug) && labels.includes(r.date));
-	const perDay = {};
 	const markers = shown.map(r => ({
 		index: labels.indexOf(r.date),
-		row: perDay[r.date] = (perDay[r.date] ?? -1) + 1,
+		slug: r.slug,
+		date: r.date,
 		version: r.version,
 		colour: COLOURS[slugs.indexOf(r.slug) % COLOURS.length]
 	}));
-	const rows = Math.min(2, Math.max(0, ...markers.map(m => m.row + 1)));
+	renderStrip(markers, slugs);
 	const datasets = slugs.map((slug, i) => ({
 		label: nameOf(slug),
 		data: labels.map(d => series[slug][d] ?? null),
@@ -361,11 +412,8 @@ function renderChart(series, slugs, firstDate, lastDate, days) {
 			maintainAspectRatio: false,
 			animation: false,
 			interaction: { mode: "index", intersect: false },
-			layout: { padding: { top: rows ? rows * 13 + 6 : 0 } },
 			plugins: {
-				// below the chart, so the release versions have the space above it
-				legend: { display: slugs.length > 1, position: "bottom", labels: { color: "#ffffff", boxHeight: 2 } },
-				releaseMarkers: { markers, rows },
+				legend: { display: slugs.length > 1, labels: { color: "#ffffff", boxHeight: 2 } },
 				tooltip: {
 					callbacks: {
 						label: c => ` ${c.dataset.label}: ${c.raw === null ? "no data" : fmt(c.raw)}`,
