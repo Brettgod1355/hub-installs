@@ -1,7 +1,7 @@
 {
- "checkedAt": "2026-11-01T11:50:46Z",
- "version": "1.13.4",
- "versionSince": "2026-11-01T11:50:46Z",
+ "checkedAt": "2026-11-01T22:18:23Z",
+ "version": "1.13.5",
+ "versionSince": "2026-11-01T22:18:23Z",
  "plugins": [
   {
    "slug": "cargo-hold-alert",
