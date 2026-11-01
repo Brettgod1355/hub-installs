@@ -359,11 +359,18 @@ function renderStrip(markers, slugs) {
 			chip.type = "button";
 			chip.dataset.index = m.index;
 			chip.style.setProperty("--c", m.colour);
-			chip.title = `${nameOf(slug)} ${m.version} - released ${m.date}`;
+			chip.setAttribute("aria-label", `${nameOf(slug)} ${m.version}, released ${m.date}`);
 			chip.append(element("i"), document.createTextNode(m.version));
+			// the chart's own info box for that day, opened at once (a title attribute waits a second or so)
 			const show = on => {
 				hoveredRelease = on ? m : null;
-				chart.draw();
+				const active = !on ? [] : chart.data.datasets
+					.map((d, datasetIndex) => ({ datasetIndex, index: m.index }))
+					.filter(a => chart.data.datasets[a.datasetIndex].data[m.index] !== null);
+				const at = { x: chart.scales.x.getPixelForValue(m.index), y: chart.chartArea.top };
+				chart.setActiveElements(active);
+				chart.tooltip.setActiveElements(active, at);
+				chart.update("none");
 			};
 			chip.addEventListener("mouseenter", () => show(true));
 			chip.addEventListener("mouseleave", () => show(false));
