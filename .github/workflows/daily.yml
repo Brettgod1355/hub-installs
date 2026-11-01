@@ -43,6 +43,11 @@ jobs:
             exit 1
           fi
 
+      # the chart's release markers; reads the data/health.json the step above wrote
+      - name: Record new releases
+        continue-on-error: true
+        run: python3 record_releases.py
+
       - name: Commit if the data changed
         run: |
           git add data

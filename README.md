@@ -126,6 +126,10 @@ only tidied up an earlier drill left open, no e-mail came from it: run the drill
 - `data/hourly.csv` - the tracked plugins, one row per plugin per hourly run:
   `time,plugin,installs` with `time` like `2026-10-27T10:37:12Z`. Rows older than 48 hours
   are dropped on each run.
+- `data/releases.csv` - one row per version of a watched plugin, for the chart's release markers:
+  `date,plugin,version`. `record_releases.py` adds a row, dated that day, whenever both jobs'
+  health check sees a version it has not recorded on the Hub; the rows before 2026-11-01 were
+  filled in by hand from the merged runelite/plugin-hub pull requests.
 
 Dates are UTC. Running twice on the same day replaces that day's rows; nothing older is
 ever removed.

@@ -115,6 +115,16 @@ function parseSeries(text) {
 	return series;
 }
 
+// date,plugin,version -> [{date, slug, version}], written by record_releases.py
+function parseReleases(text) {
+	const releases = [];
+	for (const line of text.trim().split(/\r?\n/).slice(1)) {
+		const [date, slug, version] = line.split(",");
+		if (/^\d{4}-\d\d-\d\d$/.test(date || "") && slug && version) releases.push({ date, slug, version });
+	}
+	return releases;
+}
+
 // The value on the latest day at or before `date` that has one.
 function valueAtOrBefore(byDate, date) {
 	const days = Object.keys(byDate).filter(d => d <= date && byDate[d] !== null).sort();
@@ -279,11 +289,55 @@ let chart;
 let hubNames = {};
 const nameOf = slug => hubNames[slug] || slug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 
+let releases = [];       // from data/releases.csv; without it the chart has no release markers
+
+// A dashed line in the plugin's colour on each day a version of it reached the Hub, with the version
+// on top. Versions on the same day stack; one too close to the last label on its row keeps its line
+// only, and the tooltip still names it.
+const releaseMarkers = {
+	id: "releaseMarkers",
+	afterDatasetsDraw(c, args, opts) {
+		const { ctx, chartArea: area, scales: { x } } = c;
+		const lastLabelAt = [];
+		ctx.save();
+		ctx.font = "11px Lato, sans-serif";
+		ctx.textAlign = "center";
+		ctx.textBaseline = "top";
+		for (const m of opts.markers) {
+			const px = x.getPixelForValue(m.index);
+			ctx.strokeStyle = m.colour;
+			ctx.globalAlpha = 0.55;
+			ctx.setLineDash([3, 3]);
+			ctx.lineWidth = 1;
+			ctx.beginPath();
+			ctx.moveTo(px, area.top);
+			ctx.lineTo(px, area.bottom);
+			ctx.stroke();
+			ctx.globalAlpha = 1;
+			if (m.row >= opts.rows || !(px - (lastLabelAt[m.row] ?? -Infinity) >= 30)) continue;
+			lastLabelAt[m.row] = px;
+			ctx.fillStyle = m.colour;
+			const textX = Math.min(Math.max(px, area.left + 12), area.right - 12);
+			ctx.fillText(m.version, textX, area.top - 4 - (opts.rows - m.row) * 13);
+		}
+		ctx.restore();
+	}
+};
+
 function renderChart(series, slugs, firstDate, lastDate, days) {
 	const start = days ? Math.max(toTime(firstDate), toTime(lastDate) - (days - 1) * DAY) : toTime(firstDate);
 	const labels = [];
 	for (let t = start; t <= toTime(lastDate); t += DAY) labels.push(toDate(t));
 	const dense = labels.length <= 60;
+	const shown = releases.filter(r => slugs.includes(r.slug) && labels.includes(r.date));
+	const perDay = {};
+	const markers = shown.map(r => ({
+		index: labels.indexOf(r.date),
+		row: perDay[r.date] = (perDay[r.date] ?? -1) + 1,
+		version: r.version,
+		colour: COLOURS[slugs.indexOf(r.slug) % COLOURS.length]
+	}));
+	const rows = Math.min(2, Math.max(0, ...markers.map(m => m.row + 1)));
 	const datasets = slugs.map((slug, i) => ({
 		label: nameOf(slug),
 		data: labels.map(d => series[slug][d] ?? null),
@@ -302,15 +356,21 @@ function renderChart(series, slugs, firstDate, lastDate, days) {
 	chart = new Chart(document.getElementById("chart"), {
 		type: "line",
 		data: { labels, datasets },
+		plugins: [releaseMarkers],
 		options: {
 			maintainAspectRatio: false,
 			animation: false,
 			interaction: { mode: "index", intersect: false },
+			layout: { padding: { top: rows ? rows * 13 + 6 : 0 } },
 			plugins: {
-				legend: { display: slugs.length > 1, labels: { color: "#ffffff", boxHeight: 2 } },
+				// below the chart, so the release versions have the space above it
+				legend: { display: slugs.length > 1, position: "bottom", labels: { color: "#ffffff", boxHeight: 2 } },
+				releaseMarkers: { markers, rows },
 				tooltip: {
 					callbacks: {
-						label: c => ` ${c.dataset.label}: ${c.raw === null ? "no data" : fmt(c.raw)}`
+						label: c => ` ${c.dataset.label}: ${c.raw === null ? "no data" : fmt(c.raw)}`,
+						footer: items => shown.filter(r => r.date === labels[items[0].dataIndex])
+							.map(r => `${nameOf(r.slug)} ${r.version} released`)
 					}
 				}
 			},
@@ -329,14 +389,17 @@ function renderChart(series, slugs, firstDate, lastDate, days) {
 async function load() {
 	const note = document.getElementById("note");
 	try {
-		const [csvText, latest, hourlyText, health] = await Promise.all([
+		const [csvText, latest, hourlyText, health, releasesText] = await Promise.all([
 			fetch("data/installs.csv", { cache: "no-cache" }).then(r => { if (!r.ok) throw new Error("data/installs.csv: " + r.status); return r.text(); }),
 			fetch("data/latest.json", { cache: "no-cache" }).then(r => { if (!r.ok) throw new Error("data/latest.json: " + r.status); return r.json(); }),
 			// optional: without it the "Live change, 24 hours" rows stay blank
 			fetch("data/hourly.csv", { cache: "no-cache" }).then(r => r.ok ? r.text() : "").catch(() => ""),
 			// optional: without it the cards and chart fall back to names made from the slugs
-			fetch("data/health.json", { cache: "no-cache" }).then(r => r.ok ? r.json() : null).catch(() => null)
+			fetch("data/health.json", { cache: "no-cache" }).then(r => r.ok ? r.json() : null).catch(() => null),
+			// optional: without it the chart has no release markers
+			fetch("data/releases.csv", { cache: "no-cache" }).then(r => r.ok ? r.text() : "").catch(() => "")
 		]);
+		releases = parseReleases(releasesText);
 		for (const p of Array.isArray(health?.plugins) ? health.plugins : []) {
 			if (p && typeof p.slug === "string" && typeof p.name === "string" && p.name) hubNames[p.slug] = p.name;
 		}
