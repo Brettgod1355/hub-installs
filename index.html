@@ -267,12 +267,17 @@ function renderCards(series, hourly, slugs, lastDate, latest, current) {
 				${changeRows(lastDate, n => changeCell(change(byDate, lastDate, n)))}
 				<tr><th>Hub rank</th><td>${rank === null ? '<span class="blank">-</span>' : `${fmt(rank)} of ${fmt(all.length)}${liveMarker(current, false)}`}</td></tr>
 			</table>`;
-		card.querySelector("h2 span:last-child").textContent = slug;
+		card.querySelector("h2 span:last-child").textContent = nameOf(slug);
 		holder.appendChild(card);
 	});
 }
 
 let chart;
+
+// {slug: the name the Hub shows}, from data/health.json; it only knows the watched plugins
+// that are on the Hub, so any other slug is shown as its words ("advanced-map" -> "Advanced Map")
+let hubNames = {};
+const nameOf = slug => hubNames[slug] || slug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 
 function renderChart(series, slugs, firstDate, lastDate, days) {
 	const start = days ? Math.max(toTime(firstDate), toTime(lastDate) - (days - 1) * DAY) : toTime(firstDate);
@@ -280,7 +285,7 @@ function renderChart(series, slugs, firstDate, lastDate, days) {
 	for (let t = start; t <= toTime(lastDate); t += DAY) labels.push(toDate(t));
 	const dense = labels.length <= 60;
 	const datasets = slugs.map((slug, i) => ({
-		label: slug,
+		label: nameOf(slug),
 		data: labels.map(d => series[slug][d] ?? null),
 		borderColor: COLOURS[i % COLOURS.length],
 		backgroundColor: COLOURS[i % COLOURS.length],
@@ -324,12 +329,17 @@ function renderChart(series, slugs, firstDate, lastDate, days) {
 async function load() {
 	const note = document.getElementById("note");
 	try {
-		const [csvText, latest, hourlyText] = await Promise.all([
+		const [csvText, latest, hourlyText, health] = await Promise.all([
 			fetch("data/installs.csv", { cache: "no-cache" }).then(r => { if (!r.ok) throw new Error("data/installs.csv: " + r.status); return r.text(); }),
 			fetch("data/latest.json", { cache: "no-cache" }).then(r => { if (!r.ok) throw new Error("data/latest.json: " + r.status); return r.json(); }),
 			// optional: without it the "Live change, 24 hours" rows stay blank
-			fetch("data/hourly.csv", { cache: "no-cache" }).then(r => r.ok ? r.text() : "").catch(() => "")
+			fetch("data/hourly.csv", { cache: "no-cache" }).then(r => r.ok ? r.text() : "").catch(() => ""),
+			// optional: without it the cards and chart fall back to names made from the slugs
+			fetch("data/health.json", { cache: "no-cache" }).then(r => r.ok ? r.json() : null).catch(() => null)
 		]);
+		for (const p of Array.isArray(health?.plugins) ? health.plugins : []) {
+			if (p && typeof p.slug === "string" && typeof p.name === "string" && p.name) hubNames[p.slug] = p.name;
+		}
 		const series = parseSeries(csvText);
 		const dates = [...new Set(Object.values(series).flatMap(Object.keys))].sort();
 		if (!dates.length) {
