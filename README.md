@@ -10,9 +10,10 @@ for this repository, serving from the root of `main`).
 
 Built by [2hBuilds](https://github.com/2hBuilds) in
 [2hBuilds/hub-installs](https://github.com/2hBuilds/hub-installs), who kindly said I was
-welcome to make my own. This copy keeps his commit history and code; the changes are only
-the plugins it charts (`plugins.txt`), the owner it watches (`owners.txt`) and the data,
-which starts from his daily snapshots of the whole Hub (`data/all/`).
+welcome to make my own. This copy keeps his commit history and code. On top of it: the plugins
+it charts (`plugins.txt`), the owner it watches (`owners.txt`), the data, which starts from his
+daily snapshots of the whole Hub (`data/all/`), Hub names on the page, the release strip
+(`record_releases.py`, `data/releases.csv`) and a favicon.
 
 The chart and each card's "Change, 1 / 7 / 30 days" rows are the daily recording described
 below, so they run up to the last daily reading (03:15 UTC); hovering a row says which. The
