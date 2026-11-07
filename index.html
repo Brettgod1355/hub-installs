@@ -637,9 +637,15 @@ async function loadHealth() {
 		const r = await fetch("data/health.json", { cache: "no-cache" });
 		if (!r.ok) return;
 		const health = await r.json();
+		// health.json is only committed when a status changes; last-check.json on every run
+		const last = await fetch("data/last-check.json", { cache: "no-cache" })
+			.then(r => r.ok ? r.json() : null).catch(() => null);
+		const checkedAt = [health.checkedAt, last && last.checkedAt]
+			.filter(t => typeof t === "string" && !isNaN(Date.parse(t)))
+			.sort((a, b) => Date.parse(b) - Date.parse(a))[0];
 		const plugins = (Array.isArray(health.plugins) ? health.plugins : []).filter(p => p && typeof p.slug === "string");
-		const checked = localTime(health.checkedAt);
-		const stale = !(Date.now() - Date.parse(health.checkedAt) <= STALE_MS);
+		const checked = localTime(checkedAt);
+		const stale = !(Date.now() - Date.parse(checkedAt) <= STALE_MS);
 		const when = `RuneLite ${String(health.version)} - checked ${checked || "at an unknown time"}`;
 		const name = p => String(p.name || p.slug);
 		const down = plugins.filter(p => p.status !== "ok" && p.status !== "pending");

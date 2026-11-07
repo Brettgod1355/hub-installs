@@ -329,6 +329,16 @@ class ChangeTest(unittest.TestCase):
         self.assertTrue(text.startswith('{\n "checkedAt"'))
         self.assertEqual([p["slug"] for p in state(root)["plugins"]], ["alpha", SLUG, "zeta"])
 
+    def test_every_check_records_when_it_ran(self):
+        root = make_root()
+        hub = Hub(body=manifest([entry()], [SLUG]))
+        check(root, hub, T0)
+        later = T0 + datetime.timedelta(hours=5)
+        _, _, output, _ = check(root, hub, later)
+        self.assertIn("changed=false", output)
+        with open(os.path.join(root, "data", "last-check.json"), encoding="utf-8") as f:
+            self.assertEqual(f.read(), '{"checkedAt": "2026-09-28T18:37:00Z"}\n')
+
     def test_without_github_output_it_only_prints(self):
         root = make_root()
         code, _, output, printed = check(root, Hub(body=manifest([entry()], [SLUG])), T0, env={})

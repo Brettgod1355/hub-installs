@@ -596,6 +596,9 @@ def run(root=ROOT, fetch=None, fetch_manifest=None, now=None, fetch_file=None):
         print("::warning::%s" % warning)
     append_log(os.path.join(data_dir, "health-log.csv"), outcome.rows)
     write_text(os.path.join(data_dir, "health.json"), json.dumps(outcome.state, indent=1) + "\n")
+    # committed every run, unlike health.json (only on a change), so the page can show when the check last ran
+    write_text(os.path.join(data_dir, "last-check.json"),
+               json.dumps({"checkedAt": outcome.state["checkedAt"]}) + "\n")
     print("%s: client %s, %d plugins in the manifest, %d watched" % (
         outcome.state["checkedAt"], version, len(display), len(outcome.state["plugins"])))
     for p in outcome.state["plugins"]:

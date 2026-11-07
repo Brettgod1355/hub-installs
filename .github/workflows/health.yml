@@ -59,7 +59,7 @@ jobs:
         continue-on-error: true
         run: python3 record_releases.py
 
-      # every hour for data/hourly.csv, even after a failed check; the health files only when
+      # every hour for data/hourly.csv and data/last-check.json, even after a failed check; the health files only when
       # their status changed and the issues were opened or closed
       - name: Commit if the data changed
         if: ${{ !cancelled() }}
@@ -75,7 +75,7 @@ jobs:
               git checkout -- "$f" 2>/dev/null || rm -f "$f"
             done
           fi
-          git add data/hourly.csv data/releases.csv 2>/dev/null || true
+          git add data/hourly.csv data/releases.csv data/last-check.json 2>/dev/null || true
           # the day's files, when the hourly reading caught up a day the daily job missed
           git add data/installs.csv data/latest.json data/all 2>/dev/null || true
           if git diff --cached --quiet; then
