@@ -1,5 +1,5 @@
 {
- "checkedAt": "2026-11-08T10:18:51Z",
+ "checkedAt": "2026-11-08T23:57:42Z",
  "version": "1.13.6",
  "versionSince": "2026-11-03T09:59:46Z",
  "plugins": [
@@ -7,7 +7,7 @@
    "slug": "advanced-map",
    "name": "Advanced Map",
    "author": "Brettgod1355",
-   "version": "1.0",
+   "version": "1.1",
    "status": "ok",
    "reason": null,
    "since": "2026-11-07T21:03:50Z",
