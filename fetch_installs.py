@@ -121,6 +121,12 @@ def write_latest(data_dir, date, version, counts):
     write_text(os.path.join(data_dir, "latest.json"), json.dumps(body, indent=1) + "\n")
 
 
+def write_badges(data_dir, tracked, counts):
+    """The tracked plugins' counts for the README badges; rewritten on every check, so it only changes when a count does."""
+    body = {"counts": {slug: counts[slug] for slug in sorted(tracked) if slug in counts}}
+    write_text(os.path.join(data_dir, "badges.json"), json.dumps(body, indent=1) + "\n")
+
+
 def update_series(data_dir, date, tracked, counts):
     """Replace today's rows in installs.csv; every other day's rows are kept as they are."""
     path = os.path.join(data_dir, "installs.csv")
@@ -174,6 +180,7 @@ def write_daily(data_dir, date, version, counts, tracked):
     """The daily recording: the day's file, latest.json and today's rows in installs.csv."""
     write_day(data_dir, date, counts)
     write_latest(data_dir, date, version, counts)
+    write_badges(data_dir, tracked, counts)
     update_series(data_dir, date, tracked, counts)
 
 
@@ -192,6 +199,7 @@ def record_hour(root=ROOT, fetch=None, now=None):
     counts = parse_counts(fetch(PLUGINHUB_URL.format(version=version)))
     data_dir = os.path.join(root, "data")
     update_hourly(data_dir, now, tracked, counts)
+    write_badges(data_dir, tracked, counts)
     print("%s: client %s" % (now.strftime("%Y-%m-%dT%H:%M:%SZ"), version))
     today = now.date().isoformat()
     if now.hour >= CATCH_UP_FROM_HOUR and recorded_day(data_dir) != today:

@@ -133,6 +133,13 @@ class LatestTest(unittest.TestCase):
                 latest = json.load(f)
             self.assertEqual(latest, {"date": "2026-09-27", "version": "1.12.39", "counts": {"a": 3, "b": 4}})
 
+    def test_the_daily_run_writes_the_badges_too(self):
+        with tempfile.TemporaryDirectory() as root:
+            write_plugins(root, "a")
+            fetch_installs.run(root, fake_fetch({"a": 3, "b": 4}), "2026-09-27")
+            with open(os.path.join(root, "data", "badges.json"), encoding="utf-8") as f:
+                self.assertEqual(json.load(f), {"counts": {"a": 3}})
+
 
 def at(text):
     return datetime.datetime.strptime(text, "%Y-%m-%dT%H:%M:%S").replace(tzinfo=datetime.timezone.utc)
@@ -144,7 +151,7 @@ def read_hourly(root):
 
 
 class HourlyTest(unittest.TestCase):
-    def test_writes_only_hourly_csv_for_the_tracked_plugins(self):
+    def test_writes_hourly_csv_and_badges_for_the_tracked_plugins(self):
         with tempfile.TemporaryDirectory() as root:
             write_plugins(root, "a", "gone")
             missing = fetch_installs.record_hour(root, fake_fetch({"a": 3, "big": 900}), at("2026-10-27T10:37:12"))
@@ -154,7 +161,21 @@ class HourlyTest(unittest.TestCase):
                 ["2026-10-27T10:37:12Z", "a", "3"],
                 ["2026-10-27T10:37:12Z", "gone", ""],
             ])
-            self.assertEqual(os.listdir(os.path.join(root, "data")), ["hourly.csv"])
+            self.assertEqual(sorted(os.listdir(os.path.join(root, "data"))), ["badges.json", "hourly.csv"])
+            with open(os.path.join(root, "data", "badges.json"), encoding="utf-8") as f:
+                self.assertEqual(json.load(f), {"counts": {"a": 3}})
+
+    def test_badges_json_is_the_same_text_when_no_count_moved(self):
+        with tempfile.TemporaryDirectory() as root:
+            write_plugins(root, "b", "a")
+            path = os.path.join(root, "data", "badges.json")
+            fetch_installs.record_hour(root, fake_fetch({"a": 3, "b": 1}), at("2026-10-27T10:07:00"))
+            with open(path, encoding="utf-8") as f:
+                first = f.read()
+            fetch_installs.record_hour(root, fake_fetch({"a": 3, "b": 1}), at("2026-10-27T10:37:00"))
+            with open(path, encoding="utf-8") as f:
+                self.assertEqual(f.read(), first)
+            self.assertEqual(first, '{\n "counts": {\n  "a": 3,\n  "b": 1\n }\n}\n')
 
     def test_keeps_48_hours_and_drops_older_rows(self):
         with tempfile.TemporaryDirectory() as root:
@@ -206,7 +227,7 @@ class CatchUpTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root:
             write_plugins(root, "a")
             fetch_installs.record_hour(root, fake_fetch({"a": 3}), at("2026-10-29T11:59:59"))
-            self.assertEqual(os.listdir(os.path.join(root, "data")), ["hourly.csv"])
+            self.assertEqual(sorted(os.listdir(os.path.join(root, "data"))), ["badges.json", "hourly.csv"])
 
     def test_from_noon_with_no_daily_recording_it_records_the_day(self):
         with tempfile.TemporaryDirectory() as root:
