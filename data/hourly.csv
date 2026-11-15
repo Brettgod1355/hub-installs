@@ -1,10 +1,4 @@
 time,plugin,installs
-2026-11-13T22:07:10Z,advanced-map,175
-2026-11-13T22:07:10Z,cargo-hold-alert,3145
-2026-11-13T22:07:10Z,sidebar-favorites,282
-2026-11-13T22:37:10Z,advanced-map,175
-2026-11-13T22:37:10Z,cargo-hold-alert,3151
-2026-11-13T22:37:10Z,sidebar-favorites,282
 2026-11-13T23:07:10Z,advanced-map,176
 2026-11-13T23:07:10Z,cargo-hold-alert,3160
 2026-11-13T23:07:10Z,sidebar-favorites,283
@@ -284,3 +278,6 @@ time,plugin,installs
 2026-11-15T22:07:10Z,advanced-map,239
 2026-11-15T22:07:10Z,cargo-hold-alert,3271
 2026-11-15T22:07:10Z,sidebar-favorites,290
+2026-11-15T22:37:16Z,advanced-map,240
+2026-11-15T22:37:16Z,cargo-hold-alert,3272
+2026-11-15T22:37:16Z,sidebar-favorites,290
