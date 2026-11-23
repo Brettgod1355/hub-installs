@@ -1,7 +1,7 @@
 {
- "checkedAt": "2026-11-23T12:33:49Z",
- "version": "1.13.7",
- "versionSince": "2026-11-18T11:37:11Z",
+ "checkedAt": "2026-11-23T15:37:11Z",
+ "version": "1.13.8",
+ "versionSince": "2026-11-23T15:37:11Z",
  "plugins": [
   {
    "slug": "advanced-map",
